@@ -1,0 +1,359 @@
+//对数据库操作的方法
+const mongodb=require("mongodb");
+const mongoClient=mongodb.MongoClient;
+function _connect(cb){
+	mongoClient.connect("mongodb://127.0.0.1:27017",{useNewUrlParser:true},function(eer,client){
+		//要创建的数据库的名字----------elema
+		cb(client.db("elema"));
+	});
+};
+
+/*增加一条记录
+ * coll-----指定数据库中的集合
+ * obj------所要添加的内容
+ * cb-------回调函数
+*/
+module.exports.insertOne=function(coll,obj,cb){
+	//对数据库进行操作
+	_connect(function(db){
+		db.collection(coll).insertOne(obj,cb);
+	});
+};
+
+/*查找数据库中的所有内容*/
+module.exports.find=function(coll,obj,cb){
+	//给条件进行初始化
+	obj.whereObj=obj.whereObj||{};//查找的条件
+	obj.sortObj=obj.sortObj||{};//排序的条件
+	obj.skipNum=obj.skipNum||0;//条过几条数据的条件
+	obj.limitNum=obj.limitNum||0;//显示几条数据的条件
+	//对数据库进行操作
+	_connect(function(db){
+		db.collection(coll).find(obj.whereObj).sort(obj.sortObj).skip(obj.skipNum).limit(obj.limitNum).toArray(cb);
+	});
+};
+
+/*根据条件查找一条记录*/
+module.exports.findOne=function(coll,whereObj,cb){
+	//对数据库进行操作
+	_connect(function(db){
+		db.collection(coll).findOne(whereObj,cb);
+	});
+};
+
+
+/*根据ID查找一条记录*/
+module.exports.findOneById=function(coll,id,cb){
+	//对数据库进行操作
+	_connect(function(db){
+		db.collection(coll).findOne({
+			_id:mongodb.ObjectId(id)
+		},cb)
+	});
+};
+
+
+
+
+/*查找数据库中的所有内容------------findShopTypeId二级联动查找*/
+module.exports.findShopTypeId=function(coll,obj,cb){
+	//给条件进行初始化
+	obj.whereObj=obj.whereObj||{};//查找的条件
+	obj.sortObj=obj.sortObj||{};//排序的条件
+	obj.skipNum=obj.skipNum||0;//条过几条数据的条件
+	obj.limitNum=obj.limitNum||0;//显示几条数据的条件
+	//对数据库进行操作
+	_connect(function(db){
+		db.collection(coll).find(obj.whereObj).sort(obj.sortObj).skip(obj.skipNum).limit(obj.limitNum).toArray(cb);
+	});
+};
+/*查找数据库中的所有内容------------findGoodsTypeId三级联动查找*/
+module.exports.findGoodsTypeId=function(coll,obj,cb){
+	//给条件进行初始化
+	obj.whereObj=obj.whereObj||{};//查找的条件
+	obj.sortObj=obj.sortObj||{};//排序的条件
+	obj.skipNum=obj.skipNum||0;//条过几条数据的条件
+	obj.limitNum=obj.limitNum||0;//显示几条数据的条件
+	//对数据库进行操作
+	_connect(function(db){
+		db.collection(coll).find(obj.whereObj).sort(obj.sortObj).skip(obj.skipNum).limit(obj.limitNum).toArray(cb);
+	});
+};
+
+
+
+
+/*根据条件求出指定集合的总文档数*/
+module.exports.count=function(coll,whereObj,cb){
+	//对数据库进行操作
+	_connect(function(db){
+		db.collection(coll).countDocuments(whereObj).then(cb);
+	});
+};
+
+/*根据ID删除一条文档*/
+module.exports.deleteOneById=function(coll,id,cb){
+	//对数据库进行操作
+	_connect(function(db){
+		db.collection(coll).deleteOne({
+			_id:mongodb.ObjectId(id)
+		},cb);
+	});
+};
+
+
+/*根据ID修改（更新）一条数据*/
+module.exports.updateOneById=function(coll,id,upObj,cb){
+	//对数据库进行操作
+	_connect(function(db){
+		db.collection(coll).updateOne({
+			_id:mongodb.ObjectId(id)
+		},upObj,cb)
+	});
+};
+
+/*根据条件修改（更新）一条数据*/
+module.exports.updateOne=function(coll,whereObj,upObj,cb){
+	//对数据库进行操作
+	_connect(function(db){
+		db.collection(coll).updateOne(whereObj,upObj,cb)
+	});
+};
+
+
+/*根据条件进行多表联查-----------管理员信息和管理员日志信息*/
+module.exports.getAdminLogList=function(whereObj,skip,limit,cb){
+	_connect(function(db){
+		db.collection("adminLog").aggregate([
+			{
+				$match:whereObj
+			},
+			{
+				$sort:{
+					addTime:-1
+				}
+			},
+			{
+				$skip:skip
+			},
+			{
+				$limit:limit
+			},
+			{
+				$lookup:{
+					from:"adminList",//你要与那个几个进行合并
+					localField:"adminId",//本集合当中连接的依据字段
+					foreignField:"_id",//外部集合连接的依据字段
+					as:"adminInfo"//将查找到的信息放到该字段中
+				}
+			},
+			{
+				$lookup:{
+					from:"logType",//你要与那个几个进行合并
+					localField:"logType",//本集合当中连接的依据字段
+					foreignField:"logType",//外部集合连接的依据字段
+					as:"logInfo"//将查找到的信息放到该字段中
+				}
+			}
+		]).toArray(cb)
+	})
+};
+
+
+
+/*根据条件进行多表联查------------店铺和店铺类型的信息表*/
+module.exports.getShopAndTypeList=function(whereObj,skip,limit,cb){
+	_connect(function(db){
+		db.collection("shopList").aggregate([
+			{
+				$match:whereObj
+			},
+			{
+				$sort:{
+					orderNum:-1,
+					addTime:-1
+				}
+			},
+			{
+				$skip:skip
+			},
+			{
+				$limit:limit
+			},
+			{
+				$lookup:{
+					from:"shopTypeList",//你要与那个几个进行合并
+					localField:"shopTypeId",//本集合当中连接的依据字段
+					foreignField:"_id",//外部集合连接的依据字段
+					as:"shopInfo"//将查找到的信息放到该字段中
+				}
+			},
+			
+		]).toArray(cb)
+	})
+};
+/*根据条件进行多表联查------------商品类型和店铺类别和店铺的信息表*/
+module.exports.GoodsTypeListAndShopList=function(whereObj,skip,limit,cb){
+	_connect(function(db){
+		db.collection("goodsTypeList").aggregate([
+			{
+				$match:whereObj
+			},
+			{
+				$sort:{
+					addTime:-1
+				}
+			},
+			{
+				$skip:skip
+			},
+			{
+				$limit:limit
+			},
+			{
+				//商品类型与店铺
+				$lookup:{
+					from:"shopList",//你要与那个集合进行合并
+					localField:"shopId",//本集合当中连接的依据字段
+					foreignField:"_id",//外部集合连接的依据字段
+					as:"goodsInfo"//将查找到的信息放到该字段中
+				}
+			},
+			{
+				//商品类型与店铺类型
+				$lookup:{
+					from:"shopTypeList",//你要与那个集合进行合并
+					localField:"shopTypeId",//本集合当中连接的依据字段
+					foreignField:"_id",//外部集合连接的依据字段
+					as:"goodsTypeInfo"//将查找到的信息放到该字段中
+				}
+			},
+		]).toArray(cb)
+	})
+};
+/*根据条件进行多表联查------------商品---店铺类别,店铺,商品类别的信息表*/
+module.exports.Goods=function(whereObj,skip,limit,cb){
+	_connect(function(db){
+		db.collection("goodsList").aggregate([
+			{
+				$match:whereObj
+			},
+			{
+				$sort:{
+					addTime:-1
+				}
+			},
+			{
+				$skip:skip
+			},
+			{
+				$limit:limit
+			},
+			{
+				//商品与店铺类型
+				$lookup:{
+					from:"shopTypeList",//你要与那个集合进行合并
+					localField:"shopTypeListId",//本集合当中连接的依据字段
+					foreignField:"_id",//外部集合连接的依据字段
+					as:"shopTypeInfo"//将查找到的信息放到该字段中
+				}
+			},
+			{
+				//商品与店铺
+				$lookup:{
+					from:"shopList",//你要与那个集合进行合并
+					localField:"shopListId",//本集合当中连接的依据字段
+					foreignField:"_id",//外部集合连接的依据字段
+					as:"shopInfo"//将查找到的信息放到该字段中
+				}
+			},
+			{
+				//商品与商品类型
+				$lookup:{
+					from:"goodsTypeList",//你要与那个集合进行合并
+					localField:"goodTypeListId",//本集合当中连接的依据字段
+					foreignField:"_id",//外部集合连接的依据字段
+					as:"goodsTypeInfo"//将查找到的信息放到该字段中
+				}
+			},
+		]).toArray(cb)
+	})
+};
+
+/*商品---店铺类别,店铺,商品类别的信息表-----通过店铺ID来获取商品信息的接口----获取出所有的信息*/
+module.exports.getGoodsLists=function(whereObj,cb){
+	_connect(function(db){
+		db.collection("goodsList").aggregate([
+			{
+				$match:whereObj
+			},
+			{
+				$sort:{
+					addTime:-1
+				}
+			},
+			{
+				//商品与店铺类型
+				$lookup:{
+					from:"shopTypeList",//你要与那个集合进行合并
+					localField:"shopTypeListId",//本集合当中连接的依据字段
+					foreignField:"_id",//外部集合连接的依据字段
+					as:"shopTypeInfo"//将查找到的信息放到该字段中
+				}
+			},
+			{
+				//商品与店铺
+				$lookup:{
+					from:"shopList",//你要与那个集合进行合并
+					localField:"shopListId",//本集合当中连接的依据字段
+					foreignField:"_id",//外部集合连接的依据字段
+					as:"shopInfo"//将查找到的信息放到该字段中
+				}
+			},
+			{
+				//商品与商品类型
+				$lookup:{
+					from:"goodsTypeList",//你要与那个集合进行合并
+					localField:"goodTypeListId",//本集合当中连接的依据字段
+					foreignField:"_id",//外部集合连接的依据字段
+					as:"goodsTypeInfo"//将查找到的信息放到该字段中
+				}
+			},
+		]).toArray(cb)
+	})
+};
+
+
+/*根据条件进行多表联查------------商品类型和店铺类别和店铺的信息表*/
+module.exports.getGoodsTYPE=function(whereObj,cb){
+	_connect(function(db){
+		db.collection("goodsTypeList").aggregate([
+			{
+				$match:whereObj
+			},
+			{
+				$sort:{
+					addTime:-1
+				}
+			},
+			{
+				//商品类型与店铺
+				$lookup:{
+					from:"shopList",//你要与那个集合进行合并
+					localField:"shopId",//本集合当中连接的依据字段
+					foreignField:"_id",//外部集合连接的依据字段
+					as:"goodsInfo"//将查找到的信息放到该字段中
+				}
+			},
+			{
+				//商品类型与店铺类型
+				$lookup:{
+					from:"shopTypeList",//你要与那个集合进行合并
+					localField:"shopTypeId",//本集合当中连接的依据字段
+					foreignField:"_id",//外部集合连接的依据字段
+					as:"goodsTypeInfo"//将查找到的信息放到该字段中
+				}
+			},
+		]).toArray(cb)
+	})
+};

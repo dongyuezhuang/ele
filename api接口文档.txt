@@ -1,0 +1,8 @@
+1.添加addAdminList信息
+	post
+	/addAdminList
+	
+	
+2.登录管理员
+	post
+	/loginAdmin
